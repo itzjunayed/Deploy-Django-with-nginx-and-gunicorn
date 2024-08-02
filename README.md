@@ -213,7 +213,7 @@ sudo certbot --nginx -d your_domain -d www.your_domain
 
 If you made any changes in the `.socket` or `.service`, then first type
 ```sh
-sudo systemctl daemon-reload
+systemctl daemon-reload
 ```
 and then restart `.socket` and `.service`
 ```sh
@@ -227,4 +227,78 @@ sudo systemctl restart project-1.service
 sudo systemctl restart nginx
 ```
 
+## If the nginx is stopped automatically after few minutes
 
+type
+```sh
+nano /root/monitor_nginx.sh
+```
+Copy and paste the script into the file, then save and exit.
+```sh
+#!/bin/bash
+
+# Define the log file location
+LOGFILE="/root/monitor_nginx.log"
+
+# Write current date and time to the log file
+echo "$(date) - Checking Nginx status" >> $LOGFILE
+
+# Check if nginx is running using systemctl
+if systemctl is-active --quiet nginx
+then
+    echo "$(date) - Nginx is running." >> $LOGFILE
+else
+    echo "$(date) - Nginx is not running. Restarting Nginx and killing httpd." >> $LOGFILE
+    # Kill all httpd processes
+    killall httpd
+    # Restart nginx
+    systemctl restart nginx
+fi
+
+# Add a final log entry
+echo "$(date) - Script ended" >> $LOGFILE
+```
+
+Now Ensure Execute Permission
+```sh
+chmod +x /root/monitor_nginx.sh
+```
+Run the Script Manually
+```sh
+/root/monitor_nginx.sh
+```
+
+Check the Log File
+```sh
+cat /root/monitor_nginx.log
+```
+
+You should see entries indicating the status of Nginx, and if it was not running, it should have attempted to restart it.
+Now ensure the cron job is correctly set up to run every 2 minutes:
+```sh
+crontab -e
+```
+
+Ensure the line:
+```plaintext
+*/2 * * * * /root/monitor_nginx.sh
+```
+
+After a few minutes, verify that the cron job is executing correctly by checking the cron logs:
+```sh
+grep CRON /var/log/syslog
+```
+
+### Now test the Script
+ - Stop Nginx:
+   ```sh
+   systemctl stop nginx
+   ```
+ - Wait for a few minutes to allow the cron job to run and then check the log file again:
+   ```sh
+   cat /root/monitor_nginx.log
+   ```
+ - Verify if Nginx has been restarted:
+   ```sh
+   systemctl status nginx
+   ```
