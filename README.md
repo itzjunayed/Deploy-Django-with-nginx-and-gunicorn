@@ -1,1 +1,0 @@
-# Deploy-Django-with-nginx-and-gunicorn
